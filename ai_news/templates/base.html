@@ -1,0 +1,44 @@
+<!-- templates/articles/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI News Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'articles/css/dashboard.css' %}">
+</head>
+<body>
+    <header>
+        <h1>AI News Dashboard</h1>
+        <nav>
+            <ul>
+                <li><a href="{% url '">Home</a></li>
+                <li><a href="">Articles</a></li>
+                <li><a href="">Settings</a></li>
+            </ul>
+        </nav>
+        <nav>
+        {% if user.is_authenticated %}
+            Jesteś zalogowany jako {{ user }} <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: inline;">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>
+        {% else %}
+            <a href="{% url 'login' %}">Zaloguj się</a>
+
+            <a href="{% url 'register' %}">Zarejestruj się</a>
+        {% endif %}
+</nav>
+
+    </header>
+    <main>
+        {% block content %}
+        <!-- Content for each page will go here -->
+        {% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2023 AI News</p>
+    </footer>
+</body>
+</html>

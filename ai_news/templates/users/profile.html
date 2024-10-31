@@ -1,0 +1,23 @@
+<!-- templates/users/profile.html -->
+
+{% extends "base.html" %}
+{% block content %}
+  <h2>Your Profile</h2>
+  <form method="post">
+    {% csrf_token %}
+    
+    <h3>Available Categories:</h3>
+    <div>
+      {% for category in all_categories %}
+        <label>
+          <input type="checkbox" name="selected_categories" value="{{ category.id }}"
+                 {% if category in categories %}checked{% endif %}>
+          {{ category.name }}
+        </label>
+      {% endfor %}
+    </div>
+    
+    <button type="submit">Save</button>
+  </form>
+  <p><a href="{% url 'logout' %}">Logout</a></p>
+{% endblock %}

@@ -16,7 +16,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'articles'
+    'articles',
+    'users'
 ]
 
 MIDDLEWARE = [
@@ -34,7 +35,7 @@ ROOT_URLCONF = 'ai_news.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['articles/templates/'],
+        'DIRS': ['ai_news/templates/'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -83,3 +84,5 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_REDIRECT_URL = '/users/profile/'
