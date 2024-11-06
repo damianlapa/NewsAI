@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container mt-5">
+    <h1>Strona główna</h1>
+    <div class="row">
+        {% for article in articles %}
+            <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
+                <div class="card w-100">
+                    <!-- Wyświetlanie obrazka, jeśli go dodasz w modelu -->
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ article.title }}</h5>
+                        <p class="text-muted">Kategoria: {{ article.category }}</p>
+                        <p class="text-muted">Data publikacji: {{ article.publication_date }}</p>
+                        <a href="{{ article.url }}" class="btn btn-primary" target="_blank">Czytaj więcej</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
