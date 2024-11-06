@@ -11,6 +11,7 @@
                     <div class="card-body text-center">
                         <h5 class="card-title">{{ article.title }}</h5>
                         <p class="text-muted">Kategoria: {{ article.category }}</p>
+                        <p class="card-text">{{ article.summary|truncatewords:20 }}</p>
                         <p class="text-muted">Data publikacji: {{ article.publication_date }}</p>
                         <a href="{{ article.url }}" class="btn btn-primary" target="_blank">Czytaj więcej</a>
                     </div>
