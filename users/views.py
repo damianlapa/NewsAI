@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import UserRegisterForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login
 from .forms import UserProfileForm
 from articles.models import UserProfile, Category
 
@@ -12,11 +13,12 @@ def register(request):
         if form.is_valid():
             form.save()
             username = form.cleaned_data.get('username')
+            password = request.POST["password1"]
             messages.success(request, f'Konto utworzone dla {username}! Możesz się teraz zalogować.')
+            login(request, user=authenticate(request, username=username, password=password))
             return redirect('profile')
     else:
         form = UserRegisterForm()
-    all_categories = Category.objects.all()
     return render(request, 'users/register.html', locals())
 
 
@@ -30,7 +32,7 @@ def profile(request):
         form = UserProfileForm(request.POST, instance=user_profile)
         if form.is_valid():
             form.save()
-            return redirect('profile')  # Przekierowanie na profil po zapisaniu
+            return redirect('profile')
     else:
         form = UserProfileForm(instance=user_profile)
     return render(request, 'users/profile.html', locals())

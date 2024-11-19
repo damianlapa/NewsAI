@@ -2,20 +2,23 @@
 {% block content %}
 
 <div class="container mt-5">
-    <h1>Strona główna</h1>
+    <h1>Artykuły</h1>
     <div class="row">
         {% for article in articles %}
             <div class="col-lg-4 col-md-6 mb-4 d-flex align-items-stretch">
                 <div class="card w-100">
-                    <!-- Wyświetlanie obrazka, jeśli go dodasz w modelu -->
                     <div class="card-body text-center">
                         <h5 class="card-title">{{ article.title }}</h5>
                         <p class="text-muted">Kategoria: {{ article.category }}</p>
-                        <p class="card-text">{{ article.summary|truncatewords:20 }}</p>
+                        <p class="card-text">{{ article.summary }}</p>
                         <p class="text-muted">Data publikacji: {{ article.publication_date }}</p>
                         <a href="{{ article.url }}" class="btn btn-primary" target="_blank">Czytaj więcej</a>
                     </div>
                 </div>
+            </div>
+        {% empty %}
+            <div>
+                <h2>Brak artykułów o interesującej Cię tematyce. Sprawdź czy masz uzupełnione dane w <a href="{% url 'profile' %}">profilu</a></h2>
             </div>
         {% endfor %}
     </div>
