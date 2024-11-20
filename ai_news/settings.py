@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-68r@pwb9u%@ap+ve1d2ga+5qa652_qh8#wlhqonx4ez2wth0@l'
@@ -51,10 +52,20 @@ TEMPLATES = [
 WSGI_APPLICATION = 'ai_news.wsgi.application'
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'HOST': '127.0.0.1',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'newsletter',
+        'USER': "anastasiia.korobka",
+        'PASSWORD': "newsletter" ,
     }
 }
 
@@ -93,3 +104,25 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'newsletter.technologiczny@gmail.com'
 EMAIL_HOST_PASSWORD = 'kknf uxce sdst crna'
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERYD_POOL = 'solo'
+
+CELERY_BEAT_SCHEDULE = {
+    'scrape-articles-every-day': {
+        'task': 'articles.tasks.scrape_articles_task',
+        # 'schedule': crontab(hour=0, minute=0),
+        'schedule': crontab(minute='*/10'),  # Run every minute
+    },
+    'send-daily-emails': {
+        'task': 'articles.tasks.send_newsletter',
+        # 'schedule': crontab(hour=8, minute=0),
+        'schedule': crontab(minute='*/10'),  # Run every minute
+    },
+}

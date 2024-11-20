@@ -4,7 +4,10 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from .models import Article, Category
 from transformers import pipeline
-import logging  # Import logging module
+import logging
+from typing import Dict, List, Optional
+from dataclasses import dataclass
+from urllib.parse import urljoin
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,29 +16,113 @@ logger = logging.getLogger(__name__)  # Define logger
 # Initialize the summarizer pipeline
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
-
 from transformers import BartTokenizer
-
 # Initialize the tokenizer
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
 
-from transformers import BartTokenizer
+@dataclass
+class ScrapingConfig:
+    """Configuration for each source website"""
+    base_url: str
+    category_urls: Dict[str, str]
+    article_selector: str
+    title_selector: str
+    link_selector: str
+    author_selector: str
+    date_selector: str
+    date_format: str
 
-# Initialize the tokenizer
-tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+# Configuration for different news sources
+SOURCES_CONFIG = {
+    'techcrunch': ScrapingConfig(
+        base_url='https://techcrunch.com',
+        category_urls={
+            'AI': '/tag/artificial-intelligence/',
+            'IoT': '/tag/internet-of-things/',
+            'CS': '/tag/security/',
+            'RA': '/tag/robotics/',
+            'TC': '/tag/cloud/',
+            'TM': '/tag/mobile/'
+        },
+        article_selector='li.wp-block-post',
+        title_selector='h3.loop-card__title',
+        link_selector='h3.loop-card__title a',
+        author_selector='a.loop-card__author',
+        date_selector='time.loop-card__time',
+        date_format='%Y-%m-%dT%H:%M:%S%z'
+    ),
+    'theverge': ScrapingConfig(
+        base_url='https://www.theverge.com',
+        category_urls={
+            'AI': '/ai-artificial-intelligence',
+            'CS': '/cyber-security',
+            'TC': '/cloud-computing',
+            'TM': '/mobile'
+        },
+        article_selector='article',
+        title_selector='h2',
+        link_selector='h2 a',
+        author_selector='.text-gray-63',
+        date_selector='time',
+        date_format='%Y-%m-%dT%H:%M:%S.%fZ'
+    ),
+    'wired': ScrapingConfig(
+        base_url='https://www.wired.com',
+        category_urls={
+            'AI': '/tag/artificial-intelligence',
+            'IoT': '/tag/internet-of-things',
+            'CS': '/tag/security',
+            'BT': '/tag/biotechnology',
+            'NT': '/tag/nanotechnology',
+            'TK': '/tag/quantum-computing'
+        },
+        article_selector='article.archive-item-component',
+        title_selector='h2.archive-item-component__title',
+        link_selector='a.archive-item-component__link',
+        author_selector='.byline__name',
+        date_selector='time',
+        date_format='%Y-%m-%d'
+    ),
+    'sciencenews': ScrapingConfig(
+        base_url='https://www.sciencenews.org',
+        category_urls={
+            'AI': '/topic/artificial-intelligence',
+            'BT': '/topic/biotechnology',
+            'NT': '/topic/nanotechnology',
+            'EO': '/topic/clean-energy',
+            'TK': '/topic/quantum-physics'
+        },
+        article_selector='article.post-item',
+        title_selector='h3.post-item-river__title',
+        link_selector='h3.post-item-river__title a',
+        author_selector='.post-item-river__author',
+        date_selector='.post-item-river__date',
+        date_format='%B %d, %Y'
+    ),
+    'zdnet': ScrapingConfig(
+        base_url='https://www.zdnet.com',
+        category_urls={
+            'AI': '/topic/artificial-intelligence',
+            'IoT': '/topic/internet-of-things',
+            'CS': '/topic/security',
+            'TC': '/topic/cloud',
+            'TM': '/topic/mobility'
+        },
+        article_selector='article.item',
+        title_selector='h3.title',
+        link_selector='h3.title a',
+        author_selector='.author',
+        date_selector='time',
+        date_format='%Y-%m-%dT%H:%M:%S%z'
+    )
+}
 
-def generate_summary(text, max_length=130, min_length=30):
-    """
-    Generates a summary of the provided text using the BART model,
-    compatible with TensorFlow environments.
-    """
+def generate_summary(text: str, max_length: int = 130, min_length: int = 30) -> str:
+    """Generates a summary of the provided text using the BART model"""
     if not text:
         return "No content available for summarization."
 
-    # Tokenize the text with truncation, using plain strings
     inputs = tokenizer(text, truncation=True, max_length=1024, return_attention_mask=False, return_token_type_ids=False)
-
-    # Decode the truncated input back to text
     truncated_text = tokenizer.decode(inputs['input_ids'], skip_special_tokens=True)
 
     try:
@@ -46,96 +133,142 @@ def generate_summary(text, max_length=130, min_length=30):
         return "Summary could not be generated due to an error."
 
 
-
-def fetch_article_content(url):
-    """
-    Fetches the main content of an article from a given URL.
-    """
+def fetch_article_content(url: str) -> Optional[str]:
+    """Fetches the main content of an article from a given URL"""
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         response.raise_for_status()
     except requests.RequestException as e:
         logger.error(f"Error fetching article content from URL {url}: {e}")
-        return None  # Return None to handle downstream
+        return None
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Attempt to find the main content in various containers
-    possible_containers = [
-        {'tag': 'div', 'class': 'entry-content wp-block-post-content'},
-        {'tag': 'div', 'class': 'article-content'},
-        {'tag': 'div', 'class': 'main-content'},
-        {'tag': 'article'},
-        {'tag': 'section', 'class': 'content'},
-        {'tag': 'main', 'class': 'wp-block-group template-content'},
+    # Define content selectors
+    content_selectors = [
+        {'tag': 'div', 'class': ['entry-content', 'wp-block-post-content']},
+        {'tag': 'div', 'class': ['article-content', 'post-content']},
+        {'tag': 'div', 'class': ['main-content', 'content-body']},
+        {'tag': 'article', 'class': ['article-body', 'post-content']},
+        {'tag': 'main', 'class': ['main-content', 'article-main']},
+        {'tag': 'section', 'class': ['content', 'article-content']}
     ]
 
-    content = None
-    for container in possible_containers:
-        content_div = soup.find(container['tag'], class_=container.get('class'))
-        if content_div:
-            # Extract paragraphs within this container
-            paragraphs = content_div.find_all('p')
-            content = " ".join([p.get_text() for p in paragraphs])
-            if content.strip():  # If content was found, break out of the loop
-                logger.info(f"Content found in container {container['tag']} with class {container.get('class')}")
-                break
-            else:
-                logger.warning(f"Empty content in container {container['tag']} with class {container.get('class')}")
+    # Try each selector
+    for selector in content_selectors:
+        for class_name in selector['class']:
+            content_div = soup.find(selector['tag'], class_=class_name)
+            if content_div:
+                paragraphs = content_div.find_all('p')
+                content = " ".join([p.get_text() for p in paragraphs])
+                if content.strip():
+                    return content
 
-    # Fallback: If no container was found, attempt to retrieve all text from <p> tags in <main>
-    if not content:
-        main_content = soup.find('main')
-        if main_content:
-            paragraphs = main_content.find_all('p')
-            content = " ".join([p.get_text() for p in paragraphs])
-            logger.info("Fallback to <main> tag for content extraction.")
+    # Fallback to main or article tags
+    main_content = soup.find('main') or soup.find('article')
+    if main_content:
+        paragraphs = main_content.find_all('p')
+        content = " ".join([p.get_text() for p in paragraphs])
+        if content.strip():
+            return content
 
-    # Final check: Ensure the content is not empty
-    if not content or not content.strip():
-        logger.warning(f"Content not found or empty for URL: {url}")
-        return "Treść niedostępna"
+    return None
 
-    return content
-
-
-def scrape_ai_articles():
-    url = "https://techcrunch.com/tag/ai/"
+def parse_date(date_str: str, date_format: str) -> datetime:
+    """Parses date string to datetime object with error handling"""
     try:
-        response = requests.get(url)
+        return datetime.strptime(date_str, date_format)
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error parsing date {date_str}: {e}")
+        return datetime.now()
+
+
+def scrape_articles(source: str, category_code: str) -> List[Dict]:
+    """Scrapes articles from a specific source and category"""
+    config = SOURCES_CONFIG[source]
+    category_url = urljoin(config.base_url, config.category_urls[category_code])
+
+    try:
+        response = requests.get(category_url, headers={'User-Agent': 'Mozilla/5.0'})
         response.raise_for_status()
     except requests.RequestException as e:
-        logger.error(f"Error fetching the page: {e}")
-        return
+        logger.error(f"Error fetching {source} - {category_code}: {e}")
+        return []
 
     soup = BeautifulSoup(response.text, 'html.parser')
-    category, _ = Category.objects.get_or_create(name="AI")
-    articles = soup.find_all('li', class_='wp-block-post', limit=5)
+    articles_data = []
 
-    for article in articles:
-        title_tag = article.find('h3', class_='loop-card__title')
-        title = title_tag.get_text(strip=True) if title_tag else "Brak tytułu"
-        link_tag = title_tag.find('a') if title_tag else None
-        url = link_tag['href'] if link_tag else "#"
+    for article in soup.select(config.article_selector)[:5]:  # Limit to 5 articles
+        try:
+            title_elem = article.select_one(config.title_selector)
+            link_elem = article.select_one(config.link_selector)
+            date_elem = article.select_one(config.date_selector)
 
-        author_tag = article.find('a', class_='loop-card__author')
-        author = author_tag.get_text(strip=True) if author_tag else "Nieznany autor"
+            if not all([title_elem, link_elem]):
+                continue
 
-        date_tag = article.find('time', class_='loop-card__time')
-        pub_date = datetime.strptime(date_tag['datetime'], '%Y-%m-%dT%H:%M:%S%z') if date_tag else datetime.now()
+            title = title_elem.get_text(strip=True)
+            url = link_elem.get('href')
+            if not url.startswith('http'):
+                url = urljoin(config.base_url, url)
 
-        # Fetch and summarize article content
-        article_content = fetch_article_content(url)
-        summary = generate_summary(article_content)
+            pub_date = parse_date(
+                date_elem.get('datetime', date_elem.get_text(strip=True)),
+                config.date_format
+            ) if date_elem else datetime.now()
 
-        # Add article to the database, checking for duplicates based on title and publication date
-        Article.objects.get_or_create(
-            title=title,
-            url=url,
-            summary=summary,
-            # author=author,
-            category=category,
-            publication_date=pub_date
-        )
+            articles_data.append({
+                'title': title,
+                'url': url,
+                'publication_date': pub_date
+            })
 
-    logger.info("Scraping completed. AI articles from TechCrunch have been added.")
+        except Exception as e:
+            logger.error(f"Error processing article from {source}: {e}")
+            continue
+
+    return articles_data
+
+
+def scrape_all_articles():
+    """Scrapes articles from all sources for all configured categories"""
+    for category_code, category_name in {
+        'AI': 'Sztuczna Inteligencja i Uczenie Maszynowe',
+        'IoT': 'Internet Rzeczy',
+        'CS': 'Cyberbezpieczeństwo',
+        'RA': 'Robotyka i Automatyzacja',
+        'TC': 'Technologie Chmurowe',
+        'TM': 'Technologie Mobilne',
+        'BT': 'Biotechnologia',
+        'NT': 'Nanotechnologia',
+        'EO': 'Energetyka Odnawialna',
+        'TK': 'Technologie Kwantowe'
+    }.items():
+        category, _ = Category.objects.get_or_create(name=category_name)
+
+        for source, config in SOURCES_CONFIG.items():
+            if category_code in config.category_urls:
+                articles = scrape_articles(source, category_code)
+
+                for article_data in articles:
+                    try:
+                        # Check if article already exists
+                        if not Article.objects.filter(url=article_data['url']).exists():
+                            content = fetch_article_content(article_data['url'])
+                            if content:
+                                summary = generate_summary(content)
+
+                                Article.objects.create(
+                                    title=article_data['title'],
+                                    url=article_data['url'],
+                                    summary=summary,
+                                    category=category,
+                                    publication_date=article_data['publication_date']
+                                )
+                                logger.info(f"Added article: {article_data['title']}")
+
+                    except Exception as e:
+                        logger.error(f"Error saving article {article_data['title']}: {e}")
+                        continue
+
+        logger.info(f"Completed scraping for category: {category_name}")
