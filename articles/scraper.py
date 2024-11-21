@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)  # Define logger
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
 from transformers import BartTokenizer
+
 # Initialize the tokenizer
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+
 
 @dataclass
 class ScrapingConfig:
@@ -32,7 +34,7 @@ class ScrapingConfig:
     date_selector: str
     date_format: str
 
-# Configuration for different news sources
+
 SOURCES_CONFIG = {
     'techcrunch': ScrapingConfig(
         base_url='https://techcrunch.com',
@@ -56,8 +58,8 @@ SOURCES_CONFIG = {
         category_urls={
             'AI': '/ai-artificial-intelligence',
             'CS': '/cyber-security',
-            'TC': '/cloud-computing',
             'TM': '/mobile'
+            # Usunięto TC (cloud-computing) - niedziałający URL
         },
         article_selector='article',
         title_selector='h2',
@@ -72,9 +74,8 @@ SOURCES_CONFIG = {
             'AI': '/tag/artificial-intelligence',
             'IoT': '/tag/internet-of-things',
             'CS': '/tag/security',
-            'BT': '/tag/biotechnology',
-            'NT': '/tag/nanotechnology',
             'TK': '/tag/quantum-computing'
+            # Usunięto BT i NT - niedziałające URL-e
         },
         article_selector='article.archive-item-component',
         title_selector='h2.archive-item-component__title',
@@ -87,10 +88,8 @@ SOURCES_CONFIG = {
         base_url='https://www.sciencenews.org',
         category_urls={
             'AI': '/topic/artificial-intelligence',
-            'BT': '/topic/biotechnology',
-            'NT': '/topic/nanotechnology',
-            'EO': '/topic/clean-energy',
             'TK': '/topic/quantum-physics'
+            # Usunięto BT, NT, EO - niedziałające URL-e
         },
         article_selector='article.post-item',
         title_selector='h3.post-item-river__title',
@@ -114,8 +113,49 @@ SOURCES_CONFIG = {
         author_selector='.author',
         date_selector='time',
         date_format='%Y-%m-%dT%H:%M:%S%z'
+    ),
+    'nanowerk': ScrapingConfig(
+        base_url='https://www.nanowerk.com',
+        category_urls={
+            'NT': '/category-nanoresearch.php',
+            'BT': '/category-biotech.php',
+            'EO': '/category-cleantech.php',
+            'RA': '/category-robotics.php'
+        },
+        article_selector='article.post',
+        title_selector='h2.entry-title',
+        link_selector='h2.entry-title a',
+        author_selector='.author',
+        date_selector='.published',
+        date_format='%B %d, %Y'
+    ),
+    'renewable_energy': ScrapingConfig(
+        base_url='https://www.renewableenergyworld.com',
+        category_urls={
+            'EO': '/wind-power/',
+            'NT': '/energy-storage/'
+        },
+        article_selector='div.article-preview',
+        title_selector='h3.article-title',
+        link_selector='h3.article-title a',
+        author_selector='.article-author',
+        date_selector='.article-date',
+        date_format='%m/%d/%Y'
     )
 }
+
+
+def verify_urls():
+    for source, config in SOURCES_CONFIG.items():
+        for category, url in config.category_urls.items():
+            try:
+                full_url = urljoin(config.base_url, url)
+                response = requests.head(full_url)
+                if response.status_code == 404:
+                    logger.warning(f"Invalid URL for {source} - {category}: {full_url}")
+            except Exception as e:
+                logger.error(f"Error checking {source} - {category}: {e}")
+
 
 def generate_summary(text: str, max_length: int = 130, min_length: int = 30) -> str:
     """Generates a summary of the provided text using the BART model"""
@@ -138,6 +178,11 @@ def fetch_article_content(url: str) -> Optional[str]:
     try:
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        abstract = soup.find('div', class_='c-article-section__content')
+        if abstract:
+            return abstract.get_text(strip=True)
     except requests.RequestException as e:
         logger.error(f"Error fetching article content from URL {url}: {e}")
         return None
@@ -185,6 +230,7 @@ def parse_date(date_str: str, date_format: str) -> datetime:
 
 def scrape_articles(source: str, category_code: str) -> List[Dict]:
     """Scrapes articles from a specific source and category"""
+    # verify_urls()
     config = SOURCES_CONFIG[source]
     category_url = urljoin(config.base_url, config.category_urls[category_code])
 
@@ -232,6 +278,7 @@ def scrape_articles(source: str, category_code: str) -> List[Dict]:
 
 def scrape_all_articles():
     """Scrapes articles from all sources for all configured categories"""
+    verify_urls()
     for category_code, category_name in {
         'AI': 'Sztuczna Inteligencja i Uczenie Maszynowe',
         'IoT': 'Internet Rzeczy',

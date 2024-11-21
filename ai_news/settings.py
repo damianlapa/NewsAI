@@ -117,12 +117,12 @@ CELERYD_POOL = 'solo'
 CELERY_BEAT_SCHEDULE = {
     'scrape-articles-every-day': {
         'task': 'articles.tasks.scrape_articles_task',
-        # 'schedule': crontab(hour=0, minute=0),
-        'schedule': crontab(minute='*/10'),  # Run every minute
+        'schedule': crontab(hour=0, minute=0),
+        #'schedule': crontab(minute='*/10'),  # Run every minute
     },
     'send-daily-emails': {
         'task': 'articles.tasks.send_newsletter',
-        # 'schedule': crontab(hour=8, minute=0),
-        'schedule': crontab(minute='*/10'),  # Run every minute
+        'schedule': crontab(hour=8, minute=0),
+        #'schedule': crontab(minute='*/10'),  # Run every minute
     },
 }
