@@ -59,7 +59,6 @@ SOURCES_CONFIG = {
             'AI': '/ai-artificial-intelligence',
             'CS': '/cyber-security',
             'TM': '/mobile'
-            # Usunięto TC (cloud-computing) - niedziałający URL
         },
         article_selector='article',
         title_selector='h2',
@@ -75,7 +74,6 @@ SOURCES_CONFIG = {
             'IoT': '/tag/internet-of-things',
             'CS': '/tag/security',
             'TK': '/tag/quantum-computing'
-            # Usunięto BT i NT - niedziałające URL-e
         },
         article_selector='article.archive-item-component',
         title_selector='h2.archive-item-component__title',
@@ -199,7 +197,6 @@ def fetch_article_content(url: str) -> Optional[str]:
         {'tag': 'section', 'class': ['content', 'article-content']}
     ]
 
-    # Try each selector
     for selector in content_selectors:
         for class_name in selector['class']:
             content_div = soup.find(selector['tag'], class_=class_name)

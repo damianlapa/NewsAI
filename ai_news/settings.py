@@ -1,10 +1,10 @@
 from pathlib import Path
 import os
-
+from decouple import config
 from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = 'django-insecure-68r@pwb9u%@ap+ve1d2ga+5qa652_qh8#wlhqonx4ez2wth0@l'
+SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = True
 
@@ -65,7 +65,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'newsletter',
         'USER': "anastasiia.korobka",
-        'PASSWORD': "newsletter" ,
+        'PASSWORD': config('DATABASE_PASSWORD'),
     }
 }
 
@@ -103,7 +103,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'newsletter.technologiczny@gmail.com'
-EMAIL_HOST_PASSWORD = 'kknf uxce sdst crna'
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
