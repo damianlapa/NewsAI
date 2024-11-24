@@ -227,7 +227,6 @@ def parse_date(date_str: str, date_format: str) -> datetime:
 
 def scrape_articles(source: str, category_code: str) -> List[Dict]:
     """Scrapes articles from a specific source and category"""
-    # verify_urls()
     config = SOURCES_CONFIG[source]
     category_url = urljoin(config.base_url, config.category_urls[category_code])
 

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newsletter Technologiczny</title>
+    <style>
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+            }
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .article {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cześć {{ user.username }}!</h1>
+        <p>Oto najnowsze artykuły, które mogą Cię zainteresować:</p>
+
+        {% for article in articles %}
+        <div class="article">
+            <h2>{{ article.title }}</h2>
+            <p>{{ article.summary }}</p>
+            <p><a href="{{ article.url }}">Czytaj więcej</a></p>
+        </div>
+        {% endfor %}
+
+        <p>Pozdrawiamy,<br>Zespół Newsletter Technologiczny</p>
+    </div>
+</body>
+</html>

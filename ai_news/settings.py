@@ -8,7 +8,7 @@ SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -36,7 +36,8 @@ ROOT_URLCONF = 'ai_news.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['ai_news/templates/'],
+        # 'DIRS': ['ai_news/templates/'],
+        'DIRS': [BASE_DIR / 'ai_news/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -68,6 +69,7 @@ DATABASES = {
         'PASSWORD': config('DATABASE_PASSWORD'),
     }
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
