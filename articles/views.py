@@ -20,3 +20,7 @@ class UserArticleView(View):
         selected_categories = user_profile.selected_categories.all()
         articles = Article.objects.filter(category__in=selected_categories)
         return render(request, 'articles/main.html', {'articles': articles})
+
+@login_required
+def profile_view(request):
+    return render(request, 'profile.html')

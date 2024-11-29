@@ -1,18 +1,15 @@
-# ai_news/test_settings.py
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-test-key-not-for-production'
-
-# SECURITY WARNING: don't run with debug turned on in production!
+# Security settings
+SECRET_KEY = 'test-secret-key'
 DEBUG = True
-
 ALLOWED_HOSTS = ['*']
 
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -23,14 +20,6 @@ INSTALLED_APPS = [
     'articles',
     'users',
 ]
-
-# Wymuszone użycie SQLite dla testów
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -44,10 +33,16 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'ai_news.urls'
 
+# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'ai_news/templates'],
+        'DIRS': [
+            BASE_DIR / 'templates',
+            BASE_DIR / 'ai_news' / 'templates',
+            BASE_DIR / 'articles' / 'templates',
+            BASE_DIR / 'users' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -60,13 +55,44 @@ TEMPLATES = [
     },
 ]
 
-# Email settings for tests
+# Database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
+}
+
+# Static files
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+# Create necessary directories
+os.makedirs(STATIC_ROOT, exist_ok=True)
+os.makedirs(STATICFILES_DIRS[0], exist_ok=True)
+
+# Authentication settings
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/users/profile/'
+LOGOUT_REDIRECT_URL = '/login/'
+
+# Email
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-# Uproszczone ustawienia dla testów
+# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
-STATIC_URL = 'static/'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_HEADER_NAME = 'X-CSRFToken'
+SESSION_COOKIE_NAME = 'sessionid'
+
+# Dodaj potrzebne stałe dla testów
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'

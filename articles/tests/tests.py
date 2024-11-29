@@ -1,18 +1,10 @@
-# articles/tests.py
-import os
-from unittest import mock
-
-from django.core.mail import EmailMessage, EmailMultiAlternatives
-from django.template.loader import render_to_string
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core import mail
-from django.utils.html import strip_tags
 from django.utils.timezone import now
 from django.db import transaction
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
-import requests
 import re
 
 from articles.models import Article, Category, UserProfile
