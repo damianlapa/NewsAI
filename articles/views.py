@@ -18,7 +18,7 @@ class UserArticleView(View):
             return render(request, 'articles/main.html', {'articles': []})
 
         selected_categories = user_profile.selected_categories.all()
-        articles = Article.objects.filter(category__in=selected_categories)
+        articles = Article.objects.filter(category__in=selected_categories).order_by('-publication_date')
         return render(request, 'articles/main.html', {'articles': articles})
 
 @login_required

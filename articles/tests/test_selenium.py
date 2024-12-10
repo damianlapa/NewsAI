@@ -24,6 +24,12 @@ class SeleniumTests(StaticLiveServerTestCase):
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
             chrome_options.add_argument('--window-size=1920,1080')
+            chrome_options.add_argument('--window-size=375,812')
+            mobile_emulation = {
+                "deviceMetrics": {"width": 375, "height": 812, "pixelRatio": 3.0},
+                "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0 Mobile/15E148 Safari/604.1"
+            }
+            chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
             cls.selenium = webdriver.Chrome(options=chrome_options)
             cls.selenium.implicitly_wait(10)
             cls.selenium.execute_cdp_cmd('Runtime.enable', {})
@@ -88,45 +94,52 @@ class SeleniumTests(StaticLiveServerTestCase):
             raise
 
     def login_user(self, username, password):
-        """Helper method to log in a user"""
         try:
             # Przejdź do strony logowania
             login_url = f"{self.live_server_url}{reverse('login')}"
+            print(f"Przechodzenie do strony logowania: {login_url}")
             self.selenium.get(login_url)
             time.sleep(2)
 
             # Wypełnij formularz
-            username_input = self.wait_for_element(By.ID, 'id_username')
-            password_input = self.wait_for_element(By.ID, 'id_password')
-            username_input.clear()  # Wyczyść pole przed wpisaniem
-            password_input.clear()  # Wyczyść pole przed wpisaniem
+            username_input = self.selenium.find_element(By.ID, 'id_username')
+            password_input = self.selenium.find_element(By.ID, 'id_password')
+            username_input.clear()
+            password_input.clear()
             username_input.send_keys(username)
             password_input.send_keys(password)
 
             # Wyślij formularz
-            login_form = self.wait_for_element(By.ID, 'login-form')
+            login_form = self.selenium.find_element(By.ID, 'login-form')
             login_form.submit()
+            time.sleep(3)  # Poczekaj na załadowanie strony
 
-            # Poczekaj na przekierowanie i przeładowanie strony
-            time.sleep(3)
-
-            # Sprawdź czy komunikat powitalny jest obecny
             try:
-                welcome_messages = self.selenium.find_elements(By.CLASS_NAME, 'nav-item.nav-link')
-                for message in welcome_messages:
-                    if f"Welcome, {username}" in message.text:
-                        return True
-                raise Exception("Welcome message not found")
+                toggler = self.selenium.find_element(By.CLASS_NAME, "navbar-toggler")
+                if toggler.is_displayed():
+                    print("Kliknięcie nawigatora mobilnego...")
+                    toggler.click()
+                    time.sleep(1)
             except Exception as e:
-                print("Error checking welcome message:", str(e))
-                print("Page source:", self.selenium.page_source)
-                raise Exception("Login verification failed")
+                print(f"Brak przycisku nawigatora mobilnego: {str(e)}")
+
+                # Znajdź komunikat powitalny
+            welcome_message = self.selenium.find_element(By.XPATH, "//span[contains(text(), 'Welcome')]")
+            print("Welcome message widoczny:", welcome_message.is_displayed())
+
+            # Wymuś przewinięcie do elementu
+            self.selenium.execute_script("arguments[0].scrollIntoView(true);", welcome_message)
+            time.sleep(1)
+
+            # Odczytaj tekst elementu
+            assert welcome_message.is_displayed(), "Welcome message nie jest widoczny"
+            print("Welcome message znaleziony:", welcome_message.text)
+
+            assert f"Welcome, {username}" in welcome_message.text, "Welcome message not found"
 
         except Exception as e:
-            print(f"\nLogin failed: {str(e)}")
-            print(f"Current URL: {self.selenium.current_url}")
-            print(f"Page source:\n{self.selenium.page_source}")
-            self.selenium.save_screenshot('login_error.png')
+            print(f"Error during login: {str(e)}")
+            self.selenium.save_screenshot('login_error_debug.png')
             raise e
 
     def setup_device_emulation(self, device):
@@ -207,7 +220,7 @@ class SeleniumTests(StaticLiveServerTestCase):
             )
         except TimeoutException:
             print("Alert not found after", timeout, "seconds")
-            print("Page source:", self.selenium.page_source)
+            # print("Page source:", self.selenium.page_source)
             raise
 
     def test_login_flow(self):
@@ -220,7 +233,7 @@ class SeleniumTests(StaticLiveServerTestCase):
 
             # Wait for page load and get page source
             time.sleep(2)
-            print(f"Page source:\n{self.selenium.page_source}")
+            # print(f"Page source:\n{self.selenium.page_source}")
 
             # Wait for form to be present
             login_form = self.wait_for_element(By.ID, 'login-form')
@@ -245,7 +258,7 @@ class SeleniumTests(StaticLiveServerTestCase):
             self.selenium.save_screenshot('login_error.png')
             print(f"Login test failed: {str(e)}")
             print(f"Current URL: {self.selenium.current_url}")
-            print(f"Page source:\n{self.selenium.page_source}")
+            # print(f"Page source:\n{self.selenium.page_source}")
             raise e
 
     def test_responsive_design(self):
@@ -270,7 +283,7 @@ class SeleniumTests(StaticLiveServerTestCase):
 
             # Verify page loaded
             print(f"Current URL: {self.selenium.current_url}")
-            print(f"Page source:\n{self.selenium.page_source}")
+            # print(f"Page source:\n{self.selenium.page_source}")
 
             # Test responsive elements
             nav = self.wait_for_element(By.CLASS_NAME, 'navbar')
@@ -285,7 +298,7 @@ class SeleniumTests(StaticLiveServerTestCase):
             self.selenium.save_screenshot('responsive_error.png')
             print(f"Responsive test failed: {str(e)}")
             print(f"Current URL: {self.selenium.current_url}")
-            print(f"Page source:\n{self.selenium.page_source}")
+            # print(f"Page source:\n{self.selenium.page_source}")
             raise e
 
     def test_settings_interaction(self):
@@ -323,7 +336,7 @@ class SeleniumTests(StaticLiveServerTestCase):
         except Exception as e:
             print(f"Test failed: {str(e)}")
             print(f"Current URL: {self.selenium.current_url}")
-            print(f"Page source:\n{self.selenium.page_source}")
+            # print(f"Page source:\n{self.selenium.page_source}")
             self.selenium.save_screenshot('settings_interaction_error.png')
             raise e
 
@@ -334,32 +347,40 @@ class SeleniumTests(StaticLiveServerTestCase):
             self.login_user('testuser', 'testpass123')
             time.sleep(2)
 
-            # Ustaw rozmiar mobilny i wymuś responsywność
-            self.selenium.execute_script("""
-                window.innerWidth = 375;
-                window.innerHeight = 812;
-                document.body.style.width = '375px';
-                Array.from(document.getElementsByClassName('container')).forEach(container => {
-                    container.style.maxWidth = '375px';
-                    container.style.width = '100%';
-                    container.style.padding = '0.5rem';
-                });
+            viewport_debug = self.selenium.execute_script("""
+                return {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    outerWidth: window.outerWidth,
+                    outerHeight: window.outerHeight
+                };
             """)
-            time.sleep(2)
+            print(f"Viewport debug: {viewport_debug}")
+
+            # Sprawdź rozmiar viewportu
+            window_size = self.selenium.execute_script("return [window.innerWidth, window.innerHeight];")
+            print(f"Rozmiar viewportu: {window_size[0]}x{window_size[1]}")
 
             # Przejdź do profilu
-            self.selenium.get(f"{self.live_server_url}/users/profile/")
+            profile_url = f"{self.live_server_url}/users/profile/"
+            print(f"Przechodzenie do: {profile_url}")
+            self.selenium.get(profile_url)
             time.sleep(3)
 
-            # Sprawdź szerokość kontenera
+            # Debugowanie szerokości kontenera w JavaScript
+            js_width = self.selenium.execute_script("return document.querySelector('.container').offsetWidth;")
+            print(f"Szerokość kontenera (JS): {js_width}px")
+
+            # Debugowanie kontenerów za pomocą Selenium
             containers = self.selenium.find_elements(By.CLASS_NAME, 'container')
             for container in containers:
                 if container.is_displayed():
                     width = container.rect['width']
+                    print(f"Szerokość kontenera (Selenium): {width}px")
                     self.assertLessEqual(
                         width,
                         375,
-                        f"Container width ({width}px) exceeds mobile viewport (375px)"
+                        f"Container width ({width}px) przekracza mobile viewport (375px)"
                     )
 
         except Exception as e:
@@ -432,7 +453,7 @@ class SeleniumTests(StaticLiveServerTestCase):
         except Exception as e:
             print(f"Cross-browser test failed: {str(e)}")
             print(f"Current URL: {self.selenium.current_url}")
-            print(f"Page source:\n{self.selenium.page_source}")
+            # print(f"Page source:\n{self.selenium.page_source}")
             self.selenium.save_screenshot('cross_browser_error.png')
             raise e
 
@@ -613,4 +634,6 @@ class SeleniumTests(StaticLiveServerTestCase):
         super().tearDownClass()
 
 
-#python manage.py test articles.tests.test_selenium --settings=ai_news.test_settings -v 2
+# python manage.py test articles.tests.test_selenium --settings=ai_news.test_settings -v 2
+
+

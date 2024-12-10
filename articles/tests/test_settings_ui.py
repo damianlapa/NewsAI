@@ -55,4 +55,5 @@ class SettingsUITests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'users/profile.html')
+
 #python manage.py test articles.tests.test_settings_ui --settings=ai_news.test_settings
